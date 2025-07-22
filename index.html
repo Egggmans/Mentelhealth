@@ -2,47 +2,142 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Unpacked Story Mapper</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unpacked: Emotional Story Mapper</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/vis-network.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/vis-network.min.css" rel="stylesheet">
   <style>
-    body { font-family: Arial, sans-serif; background: #f4f6f8; margin: 0; padding: 20px; }
-    .container { max-width: 900px; margin: auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    textarea { width: 100%; height: 150px; margin-top: 10px; padding: 10px; font-size: 16px; }
-    button { margin-top: 10px; padding: 10px 20px; font-size: 16px; background: #007BFF; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    #graph { margin-top: 30px; border: 1px solid #ccc; border-radius: 6px; height: 500px; background: #fefefe; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f9fafb;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    .container {
+      max-width: 960px;
+      margin: 40px auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.07);
+    }
+    h1 {
+      font-weight: 600;
+      font-size: 28px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    textarea {
+      width: 100%;
+      height: 150px;
+      font-size: 16px;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      resize: vertical;
+    }
+    button {
+      background-color: #6366f1;
+      color: white;
+      font-size: 16px;
+      padding: 12px 24px;
+      margin-top: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #4f46e5;
+    }
+    #graph {
+      height: 600px;
+      margin-top: 40px;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      background-color: #ffffff;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>🧠 Unpacked: Story to Emotional Map</h1>
-    <p>Paste a story below. We'll turn it into a simple visual map of key emotional events.</p>
-    <textarea id="story" placeholder="e.g., I got fired in 2019, felt lost, then moved cities and started again..."></textarea>
-    <button onclick="generateMap()">Generate Map</button>
+    <h1>🧠 Unpacked: Emotional Story Mapper</h1>
+    <label for="story">Paste or write a life story below:</label>
+    <textarea id="story" placeholder="E.g., I failed my university entrance exam twice. I worked in a bookstore where a retired architect encouraged me..."></textarea>
+    <button onclick="generateMap()">Generate Emotional Map</button>
     <div id="graph"></div>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" rel="stylesheet" />
-
   <script>
-    function extractEvents(text) {
-      const sentences = text.split(/[\.\!\?]/).map(s => s.trim()).filter(Boolean);
-      return sentences.map((s, i) => ({ id: i + 1, label: s, title: `Event ${i + 1}` }));
+    function analyzeStory(text) {
+      const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+      return sentences.map((s, i) => {
+        const emotion = guessEmotion(s);
+        return {
+          id: i + 1,
+          label: s.trim(),
+          title: `Emotion: ${emotion}`,
+          color: getColorByEmotion(emotion)
+        };
+      });
+    }
+
+    function guessEmotion(sentence) {
+      sentence = sentence.toLowerCase();
+      if (sentence.includes("fail") || sentence.includes("rejected")) return "shame";
+      if (sentence.includes("encouraged") || sentence.includes("hope")) return "hope";
+      if (sentence.includes("moved") || sentence.includes("started")) return "growth";
+      if (sentence.includes("sad") || sentence.includes("lost")) return "sadness";
+      if (sentence.includes("happy") || sentence.includes("joy")) return "joy";
+      return "reflective";
+    }
+
+    function getColorByEmotion(emotion) {
+      const colors = {
+        shame: '#fca5a5',
+        hope: '#a5f3fc',
+        growth: '#bbf7d0',
+        sadness: '#c7d2fe',
+        joy: '#fde68a',
+        reflective: '#e5e7eb'
+      };
+      return { background: colors[emotion] || '#e5e7eb' };
     }
 
     function generateMap() {
-      const storyText = document.getElementById('story').value;
-      const events = extractEvents(storyText);
+      const text = document.getElementById('story').value;
+      const events = analyzeStory(text);
 
       const nodes = new vis.DataSet(events);
       const edges = new vis.DataSet(events.slice(1).map((e, i) => ({ from: events[i].id, to: e.id })));
 
       const container = document.getElementById('graph');
-      const data = { nodes: nodes, edges: edges };
+      const data = { nodes, edges };
       const options = {
-        nodes: { shape: 'box', font: { size: 16 } },
-        edges: { arrows: 'to' },
-        layout: { hierarchical: { direction: 'LR' } },
+        layout: {
+          hierarchical: {
+            direction: "LR",
+            sortMethod: "directed"
+          }
+        },
+        nodes: {
+          shape: 'box',
+          margin: 10,
+          font: { size: 14, face: 'Inter' },
+          borderWidth: 1
+        },
+        edges: {
+          arrows: { to: { enabled: true } },
+          smooth: true
+        },
         physics: false
       };
 
